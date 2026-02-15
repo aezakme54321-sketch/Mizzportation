@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mizzportation Elite | Iloilo City</title>
+    
+    <!-- External Dependencies -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --mizz-primary: #101828;
+            --mizz-accent: #00D084;
+            --mizz-blue: #2E90FA;
+            --surface: #FFFFFF;
+            --bg-light: #F9FAFB;
+            --text-main: #101828;
+            --text-sub: #667085;
+            --border: #F2F4F7;
+            --shadow-lux: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        body { background: #D0D5DD; color: var(--text-main); overflow: hidden; height: 100dvh; width: 100vw; display: flex; justify-content: center; }
+
+        .app-shell { width: 100%; max-width: 480px; height: 100dvh; background: var(--surface); position: relative; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 0 100px rgba(0,0,0,0.2); }
+        
+        .screen { position: absolute; inset: 0; background: var(--surface); z-index: 10; display: none; flex-direction: column; height: 100%; }
+        .active-screen { display: flex; }
+
+        /* --- 1: HOME DESIGN --- */
+        .hero-premium { background: linear-gradient(160deg, #F0F9FF 0%, #FFFFFF 100%); padding: 50px 24px 20px; position: relative; border-bottom: 1px solid var(--border); }
+        .hero-premium h2 { font-size: 32px; font-weight: 800; letter-spacing: -1px; line-height: 1.1; margin-bottom: 8px; color: var(--mizz-primary); }
+        .hero-premium p { color: var(--text-sub); font-size: 14px; font-weight: 500; max-width: 70%; }
+        .hero-art-wrap { position: absolute; right: 15px; top: 35px; width: 130px; height: 90px; background: rgba(0, 208, 132, 0.1); border-radius: 20px; display: flex; align-items: center; justify-content: center; transform: rotate(-5deg); }
+        .hero-art-wrap i { font-size: 50px; color: var(--mizz-accent); filter: drop-shadow(0 10px 10px rgba(0,0,0,0.1)); }
+        .elite-search-trigger { background: var(--surface); padding: 20px 24px; border-radius: 24px; display: flex; align-items: center; gap: 15px; box-shadow: var(--shadow-lux); margin-top: 30px; cursor: pointer; border: 1px solid var(--border); transition: 0.3s; }
+        .recent-section-label { padding: 25px 24px 10px; font-size: 12px; font-weight: 800; color: #98A2B3; letter-spacing: 1.5px; text-transform: uppercase; }
+
+        /* --- 2: SEARCH SCREEN --- */
+        .search-nav { padding: 20px 24px; background: white; border-bottom: 1px solid var(--border); }
+        .back-circle-nav { width: 40px; height: 40px; border-radius: 50%; background: var(--bg-light); display: flex; align-items: center; justify-content: center; cursor: pointer; margin-bottom: 20px; }
+        .input-group-premium { display: flex; flex-direction: column; gap: 12px; }
+        .input-row-elite { display: flex; align-items: center; gap: 15px; background: var(--bg-light); padding: 16px 20px; border-radius: 18px; border: 1.5px solid transparent; }
+        .input-row-elite input { border: none; background: transparent; outline: none; width: 100%; font-size: 16px; font-weight: 600; color: var(--text-main); }
+        .search-tabs { display: flex; gap: 30px; padding: 15px 24px; background: white; border-bottom: 1px solid var(--border); }
+        .search-tab { font-size: 15px; font-weight: 700; color: var(--text-sub); cursor: pointer; padding-bottom: 8px; position: relative; }
+        .search-tab.active { color: var(--mizz-accent); }
+        .search-tab.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: var(--mizz-accent); border-radius: 10px; }
+
+        /* --- 3: MAP PICKER --- */
+        .map-viewport { position: relative; flex: 1; width: 100%; background: #E5E7EB; }
+        #map-picker-canvas { height: 100%; width: 100%; z-index: 1; }
+        .elite-pin { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); z-index: 1000; pointer-events: none; font-size: 55px; color: var(--mizz-blue); filter: drop-shadow(0 12px 12px rgba(0,0,0,0.25)); }
+        .back-circle { position: absolute; top: 20px; left: 20px; z-index: 1001; width: 45px; height: 45px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .picker-drawer { background: white; padding: 25px 25px 40px; border-radius: 32px 32px 0 0; box-shadow: 0 -15px 40px rgba(0,0,0,0.08); z-index: 1001; }
+        .loc-summary { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .loc-summary b { font-size: 22px; font-weight: 800; color: var(--text-main); }
+        .heart-modern { width: 50px; height: 50px; border-radius: 15px; background: var(--bg-light); display: flex; align-items: center; justify-content: center; font-size: 24px; color: #D0D5DD; cursor: pointer; transition: 0.3s; }
+        .heart-modern.active { background: #F0F9FF; color: var(--mizz-blue); }
+
+        /* --- 4: VEHICLES --- */
+        .confirm-body { flex: 1; background: white; margin-top: -30px; border-radius: 32px 32px 0 0; z-index: 100; position: relative; padding: 30px 24px; display: flex; flex-direction: column; }
+        .vehicle-option { display: flex; align-items: center; padding: 20px; cursor: pointer; margin-bottom: 12px; border: 2px solid var(--border); border-radius: 24px; transition: 0.3s; }
+        .vehicle-option.selected { border-color: var(--mizz-accent); background: #F6FEF9; }
+        .v-icon-box { width: 55px; height: 55px; background: var(--bg-light); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--text-sub); margin-right: 18px; }
+        .v-price-tag { font-weight: 800; font-size: 18px; margin-left: auto; color: var(--mizz-primary); }
+
+        /* --- IMPROVED TRIP UI (Elite Redesign) --- */
+        .driver-info-sheet { background: white; padding: 25px 24px 35px; border-radius: 32px 32px 0 0; box-shadow: 0 -15px 30px rgba(0,0,0,0.08); position: relative; z-index: 1000; }
+        .driver-profile-row { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .driver-avatar { width: 56px; height: 56px; border-radius: 50%; background: #F2F4F7; display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--mizz-primary); border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .driver-details { flex-grow: 1; }
+        .driver-details b { font-size: 18px; font-weight: 800; display: block; }
+        .driver-details p { font-size: 13px; color: var(--text-sub); font-weight: 500; }
+        .plate-badge { background: var(--mizz-primary); color: white; padding: 6px 12px; border-radius: 10px; font-weight: 800; font-size: 13px; letter-spacing: 0.5px; }
+        .trip-status-container { display: flex; align-items: center; gap: 12px; padding: 15px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 15px 0; }
+        .status-dot { width: 10px; height: 10px; background: var(--mizz-blue); border-radius: 50%; position: relative; }
+        .status-dot::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid var(--mizz-blue); animation: pulse-dot 1.5s infinite; }
+        @keyframes pulse-dot { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
+        #t-status { font-weight: 700; color: var(--mizz-blue); font-size: 15px; }
+        .trip-actions-row { display: flex; gap: 12px; }
+        .action-circle { flex: 1; height: 54px; background: var(--bg-light); border-radius: 16px; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 700; font-size: 14px; cursor: pointer; }
+        .action-cancel { background: #FEF3F2; color: #B42318; }
+
+        /* BUTTONS */
+        .btn-elite { width: 100%; background: var(--mizz-accent); color: white; border: none; padding: 20px; border-radius: 24px; font-weight: 800; font-size: 18px; cursor: pointer; box-shadow: 0 10px 20px rgba(0, 208, 132, 0.2); }
+        .history-row { display: flex; align-items: center; gap: 18px; padding: 18px 24px; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.2s; }
+        .row-icon { background: var(--bg-light); width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: var(--text-sub); font-size: 20px; }
+        .pulse-core { width: 60px; height: 60px; background: var(--mizz-blue); border-radius: 50%; margin: 0 auto; position: relative; }
+        .pulse-core::after { content: ''; position: absolute; inset: 0; border: 2px solid var(--mizz-blue); border-radius: 50%; animation: rip 2s infinite; }
+        @keyframes rip { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2.5); opacity: 0; } }
+    </style>
+</head>
+<body>
+
+<div class="app-shell">
+
+    <!-- SCREEN 1: HOME -->
+    <div id="scr-home" class="screen active-screen">
+        <div class="hero-premium">
+            <h2>Explore <br><span id="district-name" style="color:var(--mizz-accent)">Mandurriao</span></h2>
+            <p>Your premium journey starts here.</p>
+            <div class="hero-art-wrap"><i class="fa-solid fa-bus"></i></div>
+            <div class="elite-search-trigger" onclick="navToSearch()">
+                <i class="fa-solid fa-location-dot"></i>
+                <span>Where are we headed?</span>
+            </div>
+        </div>
+        <div class="recent-section-label">Past Journeys</div>
+        <div id="history-list" style="flex:1; overflow-y:auto;"></div>
+    </div>
+
+    <!-- SCREEN 2: SEARCH -->
+    <div id="scr-search" class="screen">
+        <div class="search-nav">
+            <div class="back-circle-nav" onclick="navTo('home')"><i class="fa-solid fa-arrow-left"></i></div>
+            <div class="input-group-premium">
+                <div class="input-row-elite">
+                    <i class="fa-solid fa-circle-dot" style="color:var(--mizz-blue)"></i>
+                    <input type="text" id="p-input" placeholder="Pickup location" onfocus="activeField='p'" oninput="findLoc(this.value)">
+                    <i class="fa-solid fa-map-location-dot" style="color:var(--mizz-blue); opacity: 0.5" onclick="openMapDirect('p')"></i>
+                </div>
+                <div class="input-row-elite">
+                    <i class="fa-solid fa-location-dot" style="color:var(--brand-danger)"></i>
+                    <input type="text" id="d-input" placeholder="Enter destination" onfocus="activeField='d'" oninput="findLoc(this.value)">
+                    <i class="fa-solid fa-map-location-dot" style="color:var(--mizz-blue); opacity: 0.5" onclick="openMapDirect('d')"></i>
+                </div>
+            </div>
+        </div>
+        <div class="search-tabs">
+            <div class="search-tab active" id="t-recent" onclick="switchTab('recent')">Recent</div>
+            <div class="search-tab" id="t-suggested" onclick="switchTab('suggested')">Suggested</div>
+            <div class="search-tab" id="t-saved" onclick="switchTab('saved')">Saved</div>
+        </div>
+        <div id="search-results" style="flex:1; overflow-y:auto;"></div>
+    </div>
+
+    <!-- SCREEN 3: PICKER -->
+    <div id="scr-picker" class="screen">
+        <div class="map-viewport">
+            <div class="elite-pin"><i class="fa-solid fa-location-dot"></i></div>
+            <div id="map-picker-canvas"></div>
+            <div class="back-circle" onclick="navTo('search')"><i class="fa-solid fa-arrow-left"></i></div>
+        </div>
+        <div class="picker-drawer">
+            <div class="loc-summary">
+                <div style="flex-grow:1"><b id="pin-name">Pinning...</b><p>Iloilo City, Western Visayas</p></div>
+                <div class="heart-modern" id="heart-ico" onclick="handleHeartSave()"><i class="fa-solid fa-heart"></i></div>
+            </div>
+            <button class="btn-elite" onclick="confirmPinLogic()">Set This Location</button>
+        </div>
+    </div>
+
+    <!-- SCREEN 4: VEHICLES -->
+    <div id="scr-confirm" class="screen">
+        <div id="map-confirm" style="height:45%; width:100%; flex-shrink:0;"></div>
+        <div class="back-circle" onclick="navTo('search')"><i class="fa-solid fa-arrow-left"></i></div>
+        <div class="confirm-body">
+            <div style="font-size:11px; font-weight:800; color:var(--text-sub); letter-spacing:1px; margin-bottom:15px;">PREMIUM FLEET</div>
+            <div class="vehicle-option selected" id="v-4" onclick="selectFleet('Car 4-Seater', 'v-4', 'sedan')">
+                <div class="v-icon-box"><i class="fa-solid fa-car"></i></div>
+                <div style="flex-grow:1"><b>Sedan 4-Seater</b><p>Standard Comfort • ₱45 Base</p></div>
+                <div class="v-price-tag" id="pr-4">₱45.00</div>
+            </div>
+            <div class="vehicle-option" id="v-6" onclick="selectFleet('Car 6-Seater', 'v-6', 'suv')">
+                <div class="v-icon-box"><i class="fa-solid fa-van-shuttle"></i></div>
+                <div style="flex-grow:1"><b>SUV 6-Seater</b><p>Group Travel • ₱65 Base</p></div>
+                <div class="v-price-tag" id="pr-6">₱65.00</div>
+            </div>
+            <div class="vehicle-option" id="v-m" onclick="selectFleet('Motorcycle', 'v-m', 'moto')">
+                <div class="v-icon-box"><i class="fa-solid fa-motorcycle"></i></div>
+                <div style="flex-grow:1"><b>Mizz Moto</b><p>Fast & Efficient • ₱20 Base</p></div>
+                <div class="v-price-tag" id="pr-m">₱20.00</div>
+            </div>
+            <button class="btn-elite" id="book-btn" style="margin-top:auto" onclick="runTripEngine()">Request Ride</button>
+        </div>
+    </div>
+
+    <!-- SCREEN 5: TRIP -->
+    <div id="scr-trip" class="screen">
+        <div id="map-trip" style="flex:1; width:100%;"></div>
+        <div id="t-load" style="position:absolute; inset:0; background:rgba(255,255,255,0.9); z-index:2000; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px;">
+            <div class="pulse-core"></div>
+            <h3 style="margin-top:30px; font-weight:800;">Finding a Match</h3>
+            <p style="color:var(--text-sub); margin-top:5px;">Connecting you to the nearest elite driver...</p>
+        </div>
+        <div id="t-active" class="driver-info-sheet" style="display:none;">
+            <div style="width:40px; height:4px; background:#E4E7EC; border-radius:10px; margin: 0 auto 20px;"></div>
+            <div class="driver-profile-row">
+                <div class="driver-avatar"><i class="fa-solid fa-user-tie"></i></div>
+                <div class="driver-details"><b id="d-name">Driver</b><p id="d-car">Vehicle Details</p></div>
+                <div id="d-plate" class="plate-badge">PLATE</div>
+            </div>
+            <div class="trip-status-container">
+                <div class="status-dot"></div>
+                <div id="t-status">Arriving at pickup...</div>
+            </div>
+            <div class="trip-actions-row">
+                <!-- Message button removed here -->
+                <div class="action-circle action-cancel" onclick="location.reload()"><i class="fa-solid fa-xmark"></i> Cancel Trip</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCREEN 6: COMPLETE -->
+    <div id="scr-complete" class="screen" style="justify-content:center; align-items:center; text-align:center; padding:40px;">
+        <div style="background: #F6FEF9; width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px;"><i class="fa-solid fa-check" style="font-size:50px; color:var(--mizz-accent);"></i></div>
+        <h2 style="font-size: 28px; font-weight: 800;">Success!</h2>
+        <b id="final-fare" style="font-size: 32px; color: var(--text-main);">₱45.00</b>
+        <button class="btn-elite" style="margin-top:50px" onclick="location.reload()">Book Another Journey</button>
+    </div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    let history = JSON.parse(localStorage.getItem('mz_h_final')) || [];
+    let saved = JSON.parse(localStorage.getItem('mz_s_final')) || [];
+    let activeField = 'd', selectedType = 'sedan';
+    let pickup = { lat: 10.7202, lng: 122.5621, name: "Iloilo City" };
+    let destination = { lat: null, lng: null, name: "" }, currentPin = { ...pickup };
+
+    const fleet = {
+        sedan: [{name:"Ricardo L.", car:"Toyota Vios (Silver)", plate:"SED 101", lat:10.735, lng:122.555}],
+        suv: [{name:"Anton R.", car:"Ford Everest (White)", plate:"SUV 990", lat:10.695, lng:122.545}],
+        moto: [{name:"Michael B.", car:"Honda Beat (Red)", plate:"MTO 44", lat:10.745, lng:122.570}]
+    };
+
+    const districts = ["Mandurriao", "Jaro", "Molo", "La Paz", "Arevalo", "Lapuz"];
+    let distIdx = 0;
+    setInterval(() => { distIdx = (distIdx + 1) % districts.length; document.getElementById('district-name').innerText = districts[distIdx]; }, 4000);
+
+    function navTo(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+        document.getElementById('scr-' + id).classList.add('active-screen');
+        if(id === 'home') renderRecents();
+        if(id === 'picker') setTimeout(() => pMap.invalidateSize(), 100);
+        if(id === 'confirm') setTimeout(() => cMap.invalidateSize(), 100);
+    }
+    function navToSearch() { navTo('search'); switchTab('suggested'); }
+    function openMapDirect(f) { activeField = f; currentPin = (f==='p') ? pickup : (destination.lat ? destination : pickup); navTo('picker'); pMap.setView([currentPin.lat, currentPin.lng], 17); }
+
+    async function findLoc(v) {
+        if(v.length < 2) return;
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${v}+Iloilo&limit=5`).then(r => r.json());
+        const list = document.getElementById('search-results'); list.innerHTML = "";
+        res.forEach(i => {
+            const div = document.createElement('div'); div.className = "history-row";
+            div.innerHTML = `<div class="row-icon"><i class="fa-solid fa-location-dot"></i></div><div><b style="font-size:15px;">${i.display_name.split(',')[0]}</b><p style="font-size:11px;color:var(--text-sub)">${i.display_name.substring(0,40)}...</p></div>`;
+            div.onclick = () => { currentPin = {lat:i.lat, lng:i.lon, name:i.display_name.split(',')[0]}; navTo('picker'); pMap.setView([i.lat, i.lon], 17); };
+            list.appendChild(div);
+        });
+    }
+
+    function switchTab(t) {
+        document.querySelectorAll('.search-tab').forEach(el => el.classList.remove('active'));
+        document.getElementById('t-' + t).classList.add('active');
+        const list = document.getElementById('search-results'); list.innerHTML = "";
+        const data = t === 'recent' ? history : (t === 'suggested' ? [{name:"SM City Iloilo", lat:10.7242, lng:122.5482}, {name:"Festive Walk Mall", lat:10.7153, lng:122.5414}] : saved);
+        data.forEach(i => {
+            const div = document.createElement('div'); div.className = "history-row";
+            div.innerHTML = `<div class="row-icon"><i class="fa-solid fa-clock-rotate-left"></i></div><div><b style="font-size:15px;">${i.name}</b><p style="font-size:11px;color:var(--text-sub)">Iloilo City</p></div>`;
+            div.onclick = () => { currentPin = {lat: i.lat, lng: i.lng, name: i.name}; navTo('picker'); pMap.setView([i.lat, i.lng], 17); };
+            list.appendChild(div);
+        });
+    }
+
+    function handleHeartSave() {
+        const isS = saved.find(s => s.lat == currentPin.lat && s.lng == currentPin.lng);
+        if(isS) { if(confirm("Unsave this destination?")) { saved = saved.filter(s => s != isS); localStorage.setItem('mz_s_final', JSON.stringify(saved)); updateHeart(); } } 
+        else { const n = prompt("Name this premium spot:"); if(n) { saved.push({name:n, lat:currentPin.lat, lng:currentPin.lng}); localStorage.setItem('mz_s_final', JSON.stringify(saved)); updateHeart(); } }
+    }
+    function updateHeart() { const isS = saved.find(s => s.lat == currentPin.lat && s.lng == currentPin.lng); document.getElementById('heart-ico').classList.toggle('active', !!isS); }
+
+    const pMap = L.map('map-picker-canvas', { zoomControl: false, attributionControl: false }).setView([10.7202, 122.5621], 16);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(pMap);
+    pMap.on('moveend', async () => {
+        const c = pMap.getCenter();
+        const d = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${c.lat}&lon=${c.lng}`).then(r => r.json());
+        currentPin = { lat:c.lat, lng:c.lng, name:d.display_name.split(',')[0] };
+        document.getElementById('pin-name').innerText = currentPin.name;
+        updateHeart();
+    });
+
+    const cMap = L.map('map-confirm', { zoomControl: false, attributionControl: false }).setView([10.7202, 122.5621], 14);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(cMap);
+
+    function confirmPinLogic() {
+        if(activeField === 'p') { pickup = {...currentPin}; document.getElementById('p-input').value = pickup.name; navTo('search'); }
+        else { destination = {...currentPin}; document.getElementById('d-input').value = destination.name; navTo('confirm'); initPrices(); }
+    }
+
+    async function initPrices() {
+        cMap.eachLayer(l => { if(l instanceof L.Polyline || l instanceof L.Marker) cMap.removeLayer(l); });
+        const dKM = cMap.distance([pickup.lat, pickup.lng], [destination.lat, destination.lng]) / 1000;
+        document.getElementById('pr-4').innerText = `₱${Math.max(45, 40 + dKM * 15).toFixed(2)}`;
+        document.getElementById('pr-6').innerText = `₱${Math.max(65, 60 + dKM * 20).toFixed(2)}`;
+        document.getElementById('pr-m').innerText = `₱${Math.max(20, 10 + dKM * 8).toFixed(2)}`;
+        const path = await getPath([pickup.lat, pickup.lng], [destination.lat, destination.lng]);
+        L.polyline(path, {color: '#00D084', weight: 4}).addTo(cMap);
+        cMap.fitBounds(L.polyline(path).getBounds(), {padding: [50, 50]});
+    }
+
+    async function runTripEngine() {
+        navTo('trip');
+        const tMap = L.map('map-trip', { zoomControl:false, attributionControl:false }).setView([pickup.lat, pickup.lng], 15);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(tMap);
+        const near = fleet[selectedType][0];
+        const icon = selectedType === 'moto' ? 'fa-motorcycle' : 'fa-car-side';
+        const carMarker = L.marker([near.lat, near.lng], { icon: L.divIcon({ html: `<i class="fa-solid ${icon}" style="color:var(--mizz-blue); font-size:32px;"></i>`, className: 'c' }) }).addTo(tMap);
+
+        setTimeout(async () => {
+            document.getElementById('t-load').style.display='none'; document.getElementById('t-active').style.display='block';
+            document.getElementById('d-name').innerText = near.name; document.getElementById('d-car').innerText = near.car; document.getElementById('d-plate').innerText = near.plate;
+            const leg1 = await getPath([near.lat, near.lng], [pickup.lat, pickup.lng]); await animate(carMarker, tMap, leg1, "Arriving at pickup...");
+            const leg2 = await getPath([pickup.lat, pickup.lng], [destination.lat, destination.lng]);
+            L.polyline(leg2, {color:'#2E90FA', weight:4}).addTo(tMap); await animate(carMarker, tMap, leg2, "On the way...");
+            document.getElementById('final-fare').innerText = document.getElementById('pr-' + (selectedType === 'sedan' ? '4' : (selectedType === 'suv' ? '6' : 'm'))).innerText;
+            if(!history.find(h => h.name === destination.name)) { history.unshift(destination); localStorage.setItem('mz_h_final', JSON.stringify(history)); }
+            navTo('complete');
+        }, 3000);
+    }
+
+    async function getPath(s, e) {
+        const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${s[1]},${s[0]};${e[1]},${e[0]}?overview=full&geometries=geojson`).then(r => r.json());
+        return r.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+    }
+    function animate(m, mapObj, path, msg) {
+        document.getElementById('t-status').innerText = msg;
+        return new Promise(res => { let i = 0; const t = setInterval(() => { if(i >= path.length) { clearInterval(t); res(); } else { m.setLatLng(path[i]); mapObj.panTo(path[i]); i++; } }, 45); });
+    }
+    function renderRecents() {
+        document.getElementById('history-list').innerHTML = history.slice(0, 5).map(h => `<div class="history-row" onclick="destination={lat:${h.lat},lng:${h.lng},name:'${h.name}'}; navTo('confirm'); initPrices();"><div class="row-icon"><i class="fa-solid fa-location-dot"></i></div><div><b>${h.name}</b><p style="font-size:11px;color:var(--text-sub)">Recent Journey</p></div></div>`).join("");
+    }
+    function selectFleet(n, id, type) { 
+        selectedType = type; document.querySelectorAll('.vehicle-option').forEach(c => c.classList.remove('selected'));
+        document.getElementById(id).classList.add('selected'); document.getElementById('book-btn').innerText = "Request " + n; 
+    }
+    renderRecents();
+</script>
+</body>
+</html>
